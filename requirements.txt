@@ -1,0 +1,5 @@
+# requirements.txt
+pandas>=1.0.0
+numpy>=1.18.0
+scipy>=1.4.0
+Jinja2>=3.0.0

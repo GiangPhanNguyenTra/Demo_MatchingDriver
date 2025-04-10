@@ -1,0 +1,11 @@
+id_customer,id_driver,distance,driver_customer_distance,response_time,status
+8,8,10.619,4.988,0.605,success
+4,10,4.825,1.360,0.737,success
+7,6,13.251,6.391,0.680,success
+6,9,10.825,2.400,1.029,success
+1,3,12.215,7.516,1.010,success
+9,4,15.441,1.441,1.391,success
+3,1,6.577,0.995,1.450,success
+2,5,10.506,6.446,0.621,success
+5,,4.439,,1.256,fail (all drivers busy)
+10,2,5.653,6.707,0.682,success

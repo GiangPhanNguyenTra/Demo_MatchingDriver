@@ -1,0 +1,190 @@
+<!-- templates/report_template.html -->
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Báo cáo Kết quả Điều phối Chuyến đi</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 20px;
+        line-height: 1.5;
+      }
+      h1,
+      h2 {
+        color: #333;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 5px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 20px;
+        font-size: 0.9em;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+      }
+      tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+      .status-success {
+        color: green;
+        font-weight: bold;
+      }
+      .status-fail {
+        color: red;
+      }
+      .summary-box {
+        background-color: #eef;
+        border: 1px solid #cce;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+      }
+      .summary-box ul {
+        list-style: none;
+        padding: 0;
+      }
+      .summary-box li {
+        margin-bottom: 5px;
+      }
+      .summary-box strong {
+        display: inline-block;
+        min-width: 250px; /* Căn chỉnh các giá trị */
+      }
+      .number {
+        text-align: right; /* Căn phải số */
+      }
+      .text-center {
+        text-align: center;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Báo cáo Kết quả Điều phối Chuyến đi</h1>
+    <p>Thời gian tạo báo cáo: {{ generation_time }}</p>
+
+    {% if summary %}
+    <div class="summary-box">
+      <h2>Tóm tắt Kết quả</h2>
+      <ul>
+        <li>
+          <strong>Tổng số chuyến đi xử lý:</strong> {{ summary.total_trips }}
+        </li>
+        <li>
+          <strong>Số lượt khớp thành công:</strong>
+          <span class="status-success">{{ summary.success_count }}</span>
+        </li>
+        <li>
+          <strong>Tỷ lệ thành công:</strong> {{
+          "%.2f"|format(summary.success_rate * 100) }}%
+        </li>
+        <li>
+          <strong>Tổng số lượt thất bại:</strong>
+          <span class="status-fail">{{ summary.total_fails }}</span>
+        </li>
+        {% if summary.fails_by_reason %}
+        <ul>
+          {% for reason, count in summary.fails_by_reason.items() %}
+          <li><i>{{ reason }}:</i> {{ count }}</li>
+          {% endfor %}
+        </ul>
+        {% endif %}
+      </ul>
+      {% if summary.avg_response_time is not none %}
+      <h3>Thống kê Thời gian Phản hồi (ms) - Tất cả chuyến đi hợp lệ</h3>
+      <ul>
+        <li>
+          <strong>Trung bình:</strong> {{
+          "%.2f"|format(summary.avg_response_time) }}
+        </li>
+        <li>
+          <strong>Trung vị (Median):</strong> {{
+          "%.2f"|format(summary.median_response_time) }}
+        </li>
+        <li>
+          <strong>Phân vị 95 (P95):</strong> {{
+          "%.2f"|format(summary.p95_response_time) }}
+        </li>
+        <li>
+          <strong>Tối đa (Max):</strong> {{
+          "%.2f"|format(summary.max_response_time) }}
+        </li>
+      </ul>
+      {% endif %} {% if summary.avg_success_response_time is not none %}
+      <h3>Thống kê Thời gian Phản hồi (ms) - Chỉ chuyến thành công</h3>
+      <ul>
+        <li>
+          <strong>Trung bình:</strong> {{
+          "%.2f"|format(summary.avg_success_response_time) }}
+        </li>
+        <li>
+          <strong>Trung vị (Median):</strong> {{
+          "%.2f"|format(summary.median_success_response_time) }}
+        </li>
+        <li>
+          <strong>Phân vị 95 (P95):</strong> {{
+          "%.2f"|format(summary.p95_success_response_time) }}
+        </li>
+        <li>
+          <strong>Tối đa (Max):</strong> {{
+          "%.2f"|format(summary.max_success_response_time) }}
+        </li>
+      </ul>
+      {% endif %}
+    </div>
+    {% endif %}
+
+    <h2>Kết quả Chi tiết</h2>
+    {% if results %}
+    <table>
+      <thead>
+        <tr>
+          <th>ID Khách hàng</th>
+          <th>ID Tài xế</th>
+          <th class="number">Quãng đường Chuyến đi (km)</th>
+          <th class="number">Khoảng cách Tài xế-Khách (km)</th>
+          <th class="number">Thời gian Phản hồi (ms)</th>
+          <th class="text-center">Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody>
+        {% for row in results %}
+        <tr>
+          <td>{{ row.id_customer }}</td>
+          <td>{{ row.id_driver if row.id_driver is not none else 'N/A' }}</td>
+          <td class="number">
+            {{ "%.2f"|format(row.distance) if row.distance is not none else
+            'N/A' }}
+          </td>
+          <td class="number">
+            {{ "%.2f"|format(row.driver_customer_distance) if
+            row.driver_customer_distance is not none else 'N/A' }}
+          </td>
+          <td class="number">
+            {{ "%.1f"|format(row.response_time) if row.response_time is not none
+            else 'N/A' }}
+          </td>
+          <td
+            class="text-center {% if row.status == 'success' %}status-success{% else %}status-fail{% endif %}"
+          >
+            {{ row.status }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+    {% else %}
+    <p>Không có dữ liệu kết quả chi tiết để hiển thị.</p>
+    {% endif %}
+  </body>
+</html>
