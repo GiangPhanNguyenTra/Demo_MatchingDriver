@@ -73,7 +73,7 @@ def save_results_to_csv(results_df, output_path):
 
 
 # --- Hàm MỚI: Tạo báo cáo HTML ---
-def generate_html_report(results_df, template_dir, template_name, output_html_path):
+def generate_html_report(results_df, template_dir, template_name, output_html_path, num_drivers):
     """
     Tạo file báo cáo HTML từ DataFrame kết quả sử dụng Jinja2 template.
     """
@@ -100,6 +100,7 @@ def generate_html_report(results_df, template_dir, template_name, output_html_pa
 
     # 2. Tính toán Tóm tắt (summary)
     summary = {}
+    summary['total_drivers_available'] = num_drivers 
     summary['total_trips'] = len(results_df)
     summary['success_count'] = results_df[results_df['status'] == 'success'].shape[0]
     summary['total_fails'] = summary['total_trips'] - summary['success_count']
@@ -198,7 +199,7 @@ if __name__ == '__main__':
     print("\n[Phase 2: Dispatching Drivers]")
     results_data = None # Khởi tạo
     if drivers_data is not None and not drivers_data.empty and trips_data is not None and not trips_data.empty:
-        results_data = dispatch_drivers_locked(
+        results_data, num_valid_drivers_used  = dispatch_drivers_locked(
             trips_df=trips_data,
             drivers_df=drivers_data,
             max_workers=MAX_WORKERS_THREADS
@@ -225,7 +226,8 @@ if __name__ == '__main__':
              results_df=results_data,
              template_dir=TEMPLATE_DIR,
              template_name=TEMPLATE_NAME,
-             output_html_path=HTML_REPORT_PATH
+             output_html_path=HTML_REPORT_PATH,
+             num_drivers=num_valid_drivers_used 
          )
     else:
          print("Skipping HTML report generation as there are no results.")
