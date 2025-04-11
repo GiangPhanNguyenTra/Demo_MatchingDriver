@@ -26,7 +26,7 @@ def haversine(lat1, lon1, lat2, lon2):
     return R * c
 
 # --- Hàm tìm tài xế gần nhất bằng KDTree ---
-def find_nearest_drivers_kdtree(trip_location, driver_tree, drivers_df, k=5, max_dist_km=100.0):
+def find_nearest_drivers_kdtree(trip_location, driver_tree, drivers_df, k=5, max_dist_km=30.0):
     """Find the nearest drivers using KDTree within max_dist_km."""
     num_drivers_total = len(drivers_df)
     query_k = min(k * 2, num_drivers_total) # Query nhiều hơn một chút
@@ -78,7 +78,7 @@ def find_nearest_drivers_kdtree(trip_location, driver_tree, drivers_df, k=5, max
     return nearest_drivers[:k]
 
 # --- Hàm xử lý một chuyến đi ---
-def process_trip(trip, drivers_df, driver_kdtree, assigned_drivers_lock, assigned_drivers_set, k_nearest=400, max_driver_dist_km=100.0):
+def process_trip(trip, drivers_df, driver_kdtree, assigned_drivers_lock, assigned_drivers_set, k_nearest=400, max_driver_dist_km=30.0):
     """
     Process a single trip: find nearest available driver using KDTree and lock.
     Returns a dictionary with matching results.
@@ -241,7 +241,7 @@ def dispatch_drivers_locked(trips_df, drivers_df, max_workers=None):
                 assigned_drivers_lock,
                 assigned_drivers_set,
                 k_nearest=400, # Số lượng tài xế gần nhất để tìm kiếm
-                max_driver_dist_km=100.0
+                max_driver_dist_km=30.0
             ): index # Lưu index hoặc id_trip để debug nếu cần
             for index, row in trips_df.iterrows()
         }
