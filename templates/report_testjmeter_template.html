@@ -1,0 +1,447 @@
+<!DOCTYPE html>
+<html lang="vi">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Báo cáo Kết quả Điều phối Chuyến đi (Live)</title>
+    <style>
+      body {
+        font-family: sans-serif;
+        margin: 20px;
+        line-height: 1.5;
+      }
+      h1,
+      h2 {
+        color: #333;
+        border-bottom: 1px solid #ccc;
+        padding-bottom: 5px;
+      }
+      table {
+        border-collapse: collapse;
+        width: 100%;
+        margin-bottom: 20px;
+        font-size: 0.9em;
+      }
+      th,
+      td {
+        border: 1px solid #ddd;
+        padding: 8px;
+        text-align: left;
+      }
+      th {
+        background-color: #f2f2f2;
+        font-weight: bold;
+      }
+      tr:nth-child(even) {
+        background-color: #f9f9f9;
+      }
+      .status-success {
+        color: green;
+        font-weight: bold;
+      }
+      .status-fail {
+        color: red;
+      }
+      .summary-box {
+        background-color: #eef;
+        border: 1px solid #cce;
+        padding: 15px;
+        margin-bottom: 20px;
+        border-radius: 5px;
+      }
+      .summary-box ul {
+        list-style: none;
+        padding: 0;
+      }
+      .summary-box li {
+        margin-bottom: 5px;
+      }
+      .summary-box strong {
+        display: inline-block;
+        min-width: 250px;
+      }
+      .number {
+        text-align: right;
+      }
+      .text-center {
+        text-align: center;
+      }
+      #connection-status {
+        font-style: italic;
+        margin-bottom: 10px;
+      }
+      .status-connected {
+        color: green;
+      }
+      .status-disconnected {
+        color: red;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Báo cáo Kết quả Điều phối Chuyến đi (Live)</h1>
+    <p>
+      Thời gian tạo báo cáo ban đầu:
+      <span id="generation-time">{{ generation_time }}</span>
+    </p>
+    <div id="connection-status" class="status-disconnected">
+      Đang kết nối tới server...
+    </div>
+    <button onclick="resetResults()">Reset Kết quả trên Server</button>
+
+    <div class="summary-box" id="summary-section">
+      <h2>Tóm tắt Kết quả</h2>
+      <ul>
+        <li>
+          <strong>Số tài xế hợp lệ tham gia:</strong>
+          <span id="summary-total-drivers"
+            >{{ summary.total_drivers_available if summary else 'N/A' }}</span
+          >
+        </li>
+        <li>
+          <strong>Tổng số chuyến đi xử lý:</strong>
+          <span id="summary-total-trips"
+            >{{ summary.total_trips if summary else '0' }}</span
+          >
+        </li>
+        <li>
+          <strong>Số lượt khớp thành công:</strong>
+          <span class="status-success" id="summary-success-count"
+            >{{ summary.success_count if summary else '0' }}</span
+          >
+        </li>
+        <li>
+          <strong>Tỷ lệ thành công:</strong>
+          <span id="summary-success-rate"
+            >{{ "%.2f"|format(summary.success_rate * 100) if summary and
+            summary.success_rate is not none else '0.00' }}%</span
+          >
+        </li>
+        <li>
+          <strong>Tổng số lượt thất bại:</strong>
+          <span class="status-fail" id="summary-total-fails"
+            >{{ summary.total_fails if summary else '0' }}</span
+          >
+        </li>
+        <ul id="summary-fails-by-reason">
+          {% if summary and summary.fails_by_reason %} {% for reason, count in
+          summary.fails_by_reason.items() %}
+          <li><i>{{ reason }}:</i> {{ count }}</li>
+          {% endfor %} {% endif %}
+        </ul>
+      </ul>
+      <div id="summary-stats-all">
+        <h3>Thống kê Thời gian Phản hồi (ms) - Tất cả chuyến đi hợp lệ</h3>
+        <ul>
+          <li>
+            <strong>Trung bình:</strong>
+            <span id="summary-avg-resp"
+              >{{ "%.2f"|format(summary.avg_response_time) if summary and
+              summary.avg_response_time is not none else 'N/A' }}</span
+            >
+          </li>
+          <li>
+            <strong>Trung vị (Median):</strong>
+            <span id="summary-median-resp"
+              >{{ "%.2f"|format(summary.median_response_time) if summary and
+              summary.median_response_time is not none else 'N/A' }}</span
+            >
+          </li>
+          <li>
+            <strong>Phân vị 95 (P95):</strong>
+            <span id="summary-p95-resp"
+              >{{ "%.2f"|format(summary.p95_response_time) if summary and
+              summary.p95_response_time is not none else 'N/A' }}</span
+            >
+          </li>
+          <li>
+            <strong>Tối đa (Max):</strong>
+            <span id="summary-max-resp"
+              >{{ "%.2f"|format(summary.max_response_time) if summary and
+              summary.max_response_time is not none else 'N/A' }}</span
+            >
+          </li>
+        </ul>
+      </div>
+      <div id="summary-stats-success">
+        <h3>Thống kê Thời gian Phản hồi (ms) - Chỉ chuyến thành công</h3>
+        <ul>
+          <li>
+            <strong>Trung bình:</strong>
+            <span id="summary-success-avg-resp"
+              >{{ "%.2f"|format(summary.avg_success_response_time) if summary
+              and summary.avg_success_response_time is not none else 'N/A'
+              }}</span
+            >
+          </li>
+          <li>
+            <strong>Trung vị (Median):</strong>
+            <span id="summary-success-median-resp"
+              >{{ "%.2f"|format(summary.median_success_response_time) if summary
+              and summary.median_success_response_time is not none else 'N/A'
+              }}</span
+            >
+          </li>
+          <li>
+            <strong>Phân vị 95 (P95):</strong>
+            <span id="summary-success-p95-resp"
+              >{{ "%.2f"|format(summary.p95_success_response_time) if summary
+              and summary.p95_success_response_time is not none else 'N/A'
+              }}</span
+            >
+          </li>
+          <li>
+            <strong>Tối đa (Max):</strong>
+            <span id="summary-success-max-resp"
+              >{{ "%.2f"|format(summary.max_success_response_time) if summary
+              and summary.max_success_response_time is not none else 'N/A'
+              }}</span
+            >
+          </li>
+        </ul>
+      </div>
+    </div>
+
+    <h2>Kết quả Chi tiết</h2>
+    <table>
+      <thead>
+        <tr>
+          <th>ID Khách hàng</th>
+          <th>ID Tài xế</th>
+          <th class="number">Quãng đường Chuyến đi (km)</th>
+          <th class="number">Khoảng cách Tài xế-Khách (km)</th>
+          <th class="number">Thời gian Phản hồi (ms)</th>
+          <th class="text-center">Trạng thái</th>
+        </tr>
+      </thead>
+      <tbody id="results-tbody">
+        {% for row in results %}
+        <tr>
+          <td>{{ row.id_customer }}</td>
+          <td>{{ row.id_driver if row.id_driver is not none else 'N/A' }}</td>
+          <td class="number">
+            {{ "%.3f"|format(row.distance_km) if row.distance_km is not none
+            else 'N/A' }}
+          </td>
+          <td class="number">
+            {{ "%.3f"|format(row.driver_customer_distance_km) if
+            row.driver_customer_distance_km is not none else 'N/A' }}
+          </td>
+          <td class="number">
+            {{ "%.3f"|format(row.response_time_ms) if row.response_time_ms is
+            not none else 'N/A' }}
+          </td>
+          <td
+            class="text-center {% if row.status == 'success' %}status-success{% else %}status-fail{% endif %}"
+          >
+            {{ row.status }}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+
+    <script>
+      const tbody = document.getElementById("results-tbody");
+      const connectionStatus = document.getElementById("connection-status");
+
+      function updateSummary(summaryData) {
+        document.getElementById("summary-total-drivers").textContent =
+          summaryData.total_drivers_available !== null
+            ? summaryData.total_drivers_available
+            : "N/A";
+        document.getElementById("summary-total-trips").textContent =
+          summaryData.total_trips;
+        document.getElementById("summary-success-count").textContent =
+          summaryData.success_count;
+        document.getElementById("summary-success-rate").textContent =
+          summaryData.success_rate !== null
+            ? (summaryData.success_rate * 100).toFixed(2) + "%"
+            : "0.00%";
+        document.getElementById("summary-total-fails").textContent =
+          summaryData.total_fails;
+
+        const failsList = document.getElementById("summary-fails-by-reason");
+        failsList.innerHTML = ""; // Clear existing reasons
+        if (summaryData.fails_by_reason) {
+          for (const reason in summaryData.fails_by_reason) {
+            const count = summaryData.fails_by_reason[reason];
+            const li = document.createElement("li");
+            li.innerHTML = `<i>${reason}:</i> ${count}`;
+            failsList.appendChild(li);
+          }
+        }
+
+        // Update All Response Time Stats
+        const avgResp = document.getElementById("summary-avg-resp");
+        const medResp = document.getElementById("summary-median-resp");
+        const p95Resp = document.getElementById("summary-p95-resp");
+        const maxResp = document.getElementById("summary-max-resp");
+        avgResp.textContent =
+          summaryData.avg_response_time !== null
+            ? summaryData.avg_response_time.toFixed(2)
+            : "N/A";
+        medResp.textContent =
+          summaryData.median_response_time !== null
+            ? summaryData.median_response_time.toFixed(2)
+            : "N/A";
+        p95Resp.textContent =
+          summaryData.p95_response_time !== null
+            ? summaryData.p95_response_time.toFixed(2)
+            : "N/A";
+        maxResp.textContent =
+          summaryData.max_response_time !== null
+            ? summaryData.max_response_time.toFixed(2)
+            : "N/A";
+
+        // Update Success Response Time Stats
+        const sAvgResp = document.getElementById("summary-success-avg-resp");
+        const sMedResp = document.getElementById("summary-success-median-resp");
+        const sP95Resp = document.getElementById("summary-success-p95-resp");
+        const sMaxResp = document.getElementById("summary-success-max-resp");
+        sAvgResp.textContent =
+          summaryData.avg_success_response_time !== null
+            ? summaryData.avg_success_response_time.toFixed(2)
+            : "N/A";
+        sMedResp.textContent =
+          summaryData.median_success_response_time !== null
+            ? summaryData.median_success_response_time.toFixed(2)
+            : "N/A";
+        sP95Resp.textContent =
+          summaryData.p95_success_response_time !== null
+            ? summaryData.p95_success_response_time.toFixed(2)
+            : "N/A";
+        sMaxResp.textContent =
+          summaryData.max_success_response_time !== null
+            ? summaryData.max_success_response_time.toFixed(2)
+            : "N/A";
+      }
+
+      // --- Function to add a result row ---
+      function addResultRow(resultData) {
+        const row = tbody.insertRow(); // Thêm vào cuối bảng
+
+        const cellIdCustomer = row.insertCell();
+        const cellIdDriver = row.insertCell();
+        const cellDistance = row.insertCell();
+        const cellDriverCustDistance = row.insertCell();
+        const cellResponseTime = row.insertCell();
+        const cellStatus = row.insertCell();
+
+        cellIdCustomer.textContent = resultData.id_customer;
+        cellIdDriver.textContent =
+          resultData.id_driver !== null ? resultData.id_driver : "N/A";
+
+        cellDistance.textContent =
+          resultData.distance_km !== null
+            ? resultData.distance_km.toFixed(3)
+            : "N/A";
+        cellDistance.className = "number";
+
+        cellDriverCustDistance.textContent =
+          resultData.driver_customer_distance_km !== null
+            ? resultData.driver_customer_distance_km.toFixed(3)
+            : "N/A";
+        cellDriverCustDistance.className = "number";
+
+        cellResponseTime.textContent =
+          resultData.response_time_ms !== null
+            ? resultData.response_time_ms.toFixed(3)
+            : "N/A";
+        cellResponseTime.className = "number";
+
+        cellStatus.textContent = resultData.status;
+        cellStatus.className =
+          "text-center " +
+          (resultData.status === "success" ? "status-success" : "status-fail");
+      }
+
+      // --- Setup EventSource ---
+      function connectEventSource() {
+        console.log("Attempting to connect to SSE stream...");
+        const eventSource = new EventSource("/stream_results"); // Kết nối tới endpoint SSE
+
+        eventSource.onopen = function () {
+          console.log("SSE Connection established.");
+          connectionStatus.textContent = "Đã kết nối tới server.";
+          connectionStatus.className = "status-connected";
+        };
+
+        eventSource.onmessage = function (event) {
+          // console.log("Raw data received:", event.data); // Debug raw data
+          try {
+            const message = JSON.parse(event.data);
+            // console.log("Parsed message:", message); // Debug parsed data
+
+            if (message.type === "result" && message.data) {
+              addResultRow(message.data);
+            } else if (message.type === "summary" && message.data) {
+              updateSummary(message.data);
+            }
+          } catch (e) {
+            console.error(
+              "Error parsing SSE data:",
+              e,
+              "Raw data:",
+              event.data
+            );
+          }
+        };
+
+        eventSource.onerror = function (err) {
+          console.error("EventSource failed:", err);
+          connectionStatus.textContent =
+            "Mất kết nối tới server. Đang thử lại...";
+          connectionStatus.className = "status-disconnected";
+          eventSource.close(); // Đóng kết nối cũ
+          // Thử kết nối lại sau một khoảng thời gian
+          setTimeout(connectEventSource, 5000); // Thử lại sau 5 giây
+        };
+      }
+
+      // --- Function to trigger server reset ---
+      function resetResults() {
+        if (
+          confirm(
+            "Bạn có chắc chắn muốn xóa tất cả kết quả trên server và reset trạng thái tài xế không?"
+          )
+        ) {
+          fetch("/reset", { method: "POST" })
+            .then((response) => response.json())
+            .then((data) => {
+              console.log(data.message);
+              // Xóa các hàng trong bảng hiện tại trên client
+              tbody.innerHTML = "";
+              // Reset summary trên client (có thể gọi updateSummary với dữ liệu rỗng)
+              updateSummary({
+                // Provide an empty structure
+                total_trips: 0,
+                success_count: 0,
+                total_fails: 0,
+                success_rate: 0,
+                fails_by_reason: {},
+                avg_response_time: null,
+                median_response_time: null,
+                p95_response_time: null,
+                max_response_time: null,
+                avg_success_response_time: null,
+                median_success_response_time: null,
+                p95_success_response_time: null,
+                max_success_response_time: null,
+                total_drivers_available: document.getElementById(
+                  "summary-total-drivers"
+                ).textContent, // Keep driver count
+              });
+              alert("Đã reset kết quả trên server.");
+            })
+            .catch((error) => {
+              console.error("Error resetting results:", error);
+              alert("Lỗi khi reset kết quả trên server.");
+            });
+        }
+      }
+
+      document.addEventListener("DOMContentLoaded", connectEventSource);
+    </script>
+  </body>
+</html>
