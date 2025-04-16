@@ -132,7 +132,7 @@ def save_to_csv(drivers_df, trips_df, results_df):
     results_df.to_csv('data/dispatch_results.csv', index=False)
 
 if __name__ == '__main__':
-    num_drivers = 1200
+    num_drivers = 1000
     num_trips =  1000
     drivers_df = generate_drivers(num_drivers)
     trips_df = generate_trips(num_trips)
